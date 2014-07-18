@@ -19,7 +19,8 @@
 --------------------------------------------------------------------------------------------------------
 --drop table aline_mimic_data_march14;
 --create table aline_mimic_data_march14 as
-create table aline_mimic_data_apr14 as
+--create table aline_mimic_data_apr14 as
+create table aline_mimic_data_july14 as
 with population_1 as
 (select * from mornin.aline_mimic_COHORT_feb14
 --where icustay_id<100
@@ -1604,6 +1605,7 @@ pop.*
 
 , coalesce(vent.flg,0) as vent_flg
 --, coalesce(vent.vent_1day_flg,0) as vent_1day_flg
+, coalesce(vent.vent_b4_aline,0) as vent_1st_12hr
 , coalesce(vent.vent_b4_aline,0) as vent_b4_aline
 , case when vent.vent_day is null then 0 else vent.vent_day end as vent_day
 , case when vent.vent_free_day is null then pop.icu_los_day else vent.vent_free_day  end as vent_free_day
