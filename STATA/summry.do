@@ -1,14 +1,21 @@
 /* Original cohort: no sepsis, no vaso b4 aline, no csru and ccu, no init_aline, mv before aline*/
 // 901 patients
-import excel "/Users/mornin/Dropbox/aLin/data/aline_mimic_data_apr14.xls", ///
+import excel "/Users/mornin/Dropbox/aLin/github/Aline/Extracted Data/aline_mimic_data.xls", ///
 sheet("Export Worksheet") firstrow case(lower) clear
 
+//drop if vent_b4_aline==0
+drop if vent_1st_12hr==0
+
+drop if sepsis_flg ==1
+
+drop if vaso_flg==1
+
+drop if initial_aline_flg ==1
 
 drop if service_num>1
-drop if initial_aline_flg ==1
-drop if sepsis_flg ==1
-drop if vent_b4_aline==0
-drop if vaso_flg==1
+
+
+
 //drop if vaso_b4_aline ==1
 
 
