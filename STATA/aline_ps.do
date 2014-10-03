@@ -1,5 +1,5 @@
 /*For mv cohort */
-use "/Users/mornin/Dropbox/Alin/stata/April_2014/mv_matched_cohort_apr14.dta", clear
+use "/Users/mornin/Dropbox/aLin/github/Aline/Extracted Data/full_cohort_data.dta", clear
 
 
 //logit aline_flg age gender_num weight_first sapsi_first sofa_first service_num day_icu_intime hour_icu_intime vent_12hr_flg vaso_12hr_flg anes_12hr_flg chf_flg afib_flg renal_flg liver_flg copd_flg cad_flg stroke_flg mal_flg map_1st map_lowest map_highest hr_1st hr_lowest hr_highest temp_1st temp_lowest temp_highest wbc_first wbc_lowest wbc_highest wbc_abnormal_flg hgb_first hgb_lowest hgb_highest hgb_abnormal_flg platelet_first platelet_lowest platelet_highest platelet_abnormal_flg sodium_first sodium_lowest sodium_highest sodium_abnormal_flg potassium_first potassium_lowest potassium_highest potassium_abnormal_flg tco2_first tco2_lowest tco2_highest tco2_abnormal_flg chloride_first chloride_lowest chloride_highest chloride_abnormal_flg bun_first bun_lowest bun_highest bun_abnormal_flg creatinine_first creatinine_lowest creatinine_highest creatinine_abnormal_flg 
@@ -101,7 +101,7 @@ chloride_first ///
 bun_first ///
 creatinine_first ///
 po2_first /// 
-pco2_first, numgrps(2)
+pco2_first, numgrps(10)
 
 graph save Graph "/Users/mornin/Dropbox/aLin/stata/April_2014/roc.gph",replace
 //graph save Graph "/Users/mornin/Dropbox/aLin/stata/April_2014/roc.png",replace
@@ -125,10 +125,76 @@ po2_first ///
 pco2_first, or
 
 lroc, nograph
-estat gof, group(10) table
+estat gof, group(35) table
 
 drop phat
-predict phat
+predict phat1
+
+/////// replace missing values with median /////////
+centile map_1st
+replace map_1st=r(c_1) if map_1st==.
+
+centile hr_1st
+replace hr_1st =r(c_1) if hr_1st ==.
+
+centile spo2_1st
+replace spo2_1st =r(c_1) if spo2_1st ==.
+
+centile temp_1st
+replace temp_1st =r(c_1) if temp_1st ==.
+
+centile wbc_first
+replace wbc_first =r(c_1) if wbc_first ==.
+
+centile hgb_first
+replace hgb_first =r(c_1) if hgb_first ==.
+
+centile platelet_first
+replace platelet_first =r(c_1) if platelet_first ==.
+
+centile sodium_first
+replace sodium_first =r(c_1) if sodium_first ==.
+
+centile potassium_first
+replace potassium_first =r(c_1) if potassium_first ==.
+
+centile tco2_first
+replace tco2_first =r(c_1) if tco2_first ==.
+
+centile chloride_first
+replace chloride_first =r(c_1) if chloride_first ==.
+
+centile bun_first
+replace bun_first =r(c_1) if bun_first ==.
+
+centile creatinine_first
+replace creatinine_first =r(c_1) if creatinine_first ==.
+
+centile po2_first
+replace po2_first =r(c_1) if po2_first ==.
+
+centile pco2_first
+replace pco2_first =r(c_1) if pco2_first ==.
+
+predict phat2
+
+drop if phat2==.
+psmatch2 aline_flg, p(phat2) cal(0.01) noreplacement
+drop if _weight==.
+save "/Users/mornin/Dropbox/Alin/stata/Sep_2014/mv_matched_cohort_sep14.dta", replace
+/////////////Coded model///////////
+/*
+replace wbc_first= wbc_first_coded
+replace hgb_first = hgb_first_coded
+replace platelet_first= platelet_first_coded
+replace sodium_first= sodium_first_coded
+replace potassium_first= potassium_first_coded
+replace tco2_first=tco2_first_coded
+replace chloride_first=chloride_first_coded
+replace bun_first=bun_first_coded
+replace creatinine_first=creatinine_first_coded
+replace po2_first=po2_first_coded
+replace pco2_first=pco2_first_coded*/
 
 //use "/Users/mornin/Dropbox/Alin/stata/aline_data_jan14.dta", clear
 drop if phat==.
@@ -153,6 +219,16 @@ tabulate restraint_flg aline_flg, column exact
 tabulate gender_num aline_flg, column exact
 tabulate service_num aline_flg, column exact
 
+tabulate chf_flg aline_flg, column exact
+tabulate afib_flg aline_flg, column exact
+tabulate renal_flg aline_flg, column exact
+tabulate liver_flg aline_flg, column exact
+tabulate copd_flg aline_flg, column exact
+tabulate cad_flg aline_flg, column exact
+tabulate stroke_flg aline_flg, column exact
+tabulate mal_flg aline_flg, column exact
+tabulate resp_flg aline_flg, column exact
+
 
 generate icu_los_day_cal= icu_los_day
 replace icu_los_day_cal  = 17 if icu_exp_flg ==1
@@ -165,6 +241,10 @@ summarize icu_los_day if aline_flg ==0 & icu_exp_flg ==0,detail
 summarize icu_los_day if aline_flg ==1 & icu_exp_flg ==0,detail
 ranksum icu_los_day if icu_exp_flg ==0, by(aline_flg)
 
+summarize icu_los_day if aline_flg ==0 & icu_exp_flg ==1,detail
+summarize icu_los_day if aline_flg ==1 & icu_exp_flg ==1,detail
+ranksum icu_los_day if icu_exp_flg ==1, by(aline_flg)
+
 generate hosp_los_day_cal= hospital_los_day
 replace hosp_los_day_cal  = 44 if icu_exp_flg ==1
 
@@ -175,6 +255,11 @@ ranksum hosp_los_day_cal, by(aline_flg)
 summarize hospital_los_day if aline_flg ==0 & hosp_exp_flg ==0,detail
 summarize hospital_los_day if aline_flg ==1 & hosp_exp_flg ==0,detail
 ranksum hospital_los_day if icu_exp_flg ==0, by(aline_flg)
+
+summarize hospital_los_day if aline_flg ==0 & hosp_exp_flg ==1,detail
+summarize hospital_los_day if aline_flg ==1 & hosp_exp_flg ==1,detail
+ranksum hospital_los_day if icu_exp_flg ==1, by(aline_flg)
+
 
 generate vent_day_cal=vent_day //31 days at 95%, remove outliers
 replace vent_day_cal=45 if hosp_exp_flg ==1
@@ -261,6 +346,50 @@ ranksum weight_first, by(aline_flg)
 summarize phat if aline_flg ==0 ,detail
 summarize phat if aline_flg ==1 ,detail
 ranksum phat, by(aline_flg)
+
+summarize wbc_first if aline_flg ==0 ,detail
+summarize wbc_first if aline_flg ==1 ,detail
+ranksum wbc_first, by(aline_flg)
+
+summarize hgb_first if aline_flg ==0 ,detail
+summarize hgb_first if aline_flg ==1 ,detail
+ranksum hgb_first, by(aline_flg)
+
+summarize platelet_first if aline_flg ==0 ,detail
+summarize platelet_first if aline_flg ==1 ,detail
+ranksum platelet_first, by(aline_flg)
+
+summarize sodium_first if aline_flg ==0 ,detail
+summarize sodium_first if aline_flg ==1 ,detail
+ranksum sodium_first, by(aline_flg)
+
+summarize potassium_first if aline_flg ==0 ,detail
+summarize potassium_first if aline_flg ==1 ,detail
+ranksum potassium_first, by(aline_flg)
+
+summarize tco2_first if aline_flg ==0 ,detail
+summarize tco2_first if aline_flg ==1 ,detail
+ranksum tco2_first, by(aline_flg)
+
+summarize chloride_first if aline_flg ==0 ,detail
+summarize chloride_first if aline_flg ==1 ,detail
+ranksum chloride_first, by(aline_flg)
+
+summarize bun_first if aline_flg ==0 ,detail
+summarize bun_first if aline_flg ==1 ,detail
+ranksum bun_first, by(aline_flg)
+
+summarize creatinine_first if aline_flg ==0 ,detail
+summarize creatinine_first if aline_flg ==1 ,detail
+ranksum creatinine_first, by(aline_flg)
+
+summarize po2_first if aline_flg ==0 ,detail
+summarize po2_first if aline_flg ==1 ,detail
+ranksum po2_first, by(aline_flg)
+
+summarize pco2_first if aline_flg ==0 ,detail
+summarize pco2_first if aline_flg ==1 ,detail
+ranksum pco2_first, by(aline_flg)
 
 
 ######### landmark study #############

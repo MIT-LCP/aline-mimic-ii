@@ -4,7 +4,7 @@ import excel "/Users/mornin/Dropbox/aLin/github/Aline/Extracted Data/aline_mimic
 sheet("Export Worksheet") firstrow case(lower) clear
 
 //drop if vent_b4_aline==0
-drop if vent_1st_12hr==0
+drop if vent_1st_24hr==0
 
 drop if sepsis_flg ==1
 
@@ -19,7 +19,7 @@ drop if service_num>1
 //drop if vaso_b4_aline ==1
 
 
-save "/Users/mornin/Dropbox/Alin/stata/April_2014/mv_full_cohort_apr14.dta", replace
+save "/Users/mornin/Dropbox/aLin/github/Aline/Extracted Data/full_cohort_data.dta", replace
 
 
 //vaso cohort, no mv

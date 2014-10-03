@@ -20,7 +20,7 @@
 --drop table aline_mimic_data_march14;
 --create table aline_mimic_data_march14 as
 --create table aline_mimic_data_apr14 as
-create table aline_mimic_data_july14 as
+create table aline_mimic_data_sep14 as
 with population_1 as
 (select * from mornin.aline_mimic_COHORT_feb14
 --where icustay_id<100
@@ -142,7 +142,8 @@ from vent_group_1 v
 , case when v.vent_start_day<=(2/24) then 1 else 0 end as vent_1st_2hr_flg            
 , case when v.vent_start_day<=0.125 then 1 else 0 end as vent_1st_3hr_flg
 , case when v.vent_start_day<=0.25 then 1 else 0 end as vent_1st_6hr_flg
-, case when v.vent_start_day<=0.5 then 1 else 0 end as vent_1st_12hr_flg 
+, case when v.vent_start_day<=0.5 then 1 else 0 end as vent_1st_12hr_flg
+, case when v.vent_start_day<=1 then 1 else 0 end as vent_1st_24hr_flg
 , case when ALINE_FLG=1 and INITIAL_ALINE_FLG =0 and vent_start_day<=ALINE_TIME_DAY then 1 
        when ALINE_FLG=1 and INITIAL_ALINE_FLG =0 and vent_start_day>ALINE_TIME_DAY then 0
        when ALINE_FLG=0 and INITIAL_ALINE_FLG =0 and v.vent_start_day<=(2/24) then 1
@@ -1605,7 +1606,8 @@ pop.*
 
 , coalesce(vent.flg,0) as vent_flg
 --, coalesce(vent.vent_1day_flg,0) as vent_1day_flg
-, coalesce(vent.vent_b4_aline,0) as vent_1st_12hr
+, coalesce(vent.vent_1st_12hr_flg,0) as vent_1st_12hr
+, coalesce(vent.vent_1st_24hr_flg,0) as vent_1st_24hr
 , coalesce(vent.vent_b4_aline,0) as vent_b4_aline
 , case when vent.vent_day is null then 0 else vent.vent_day end as vent_day
 , case when vent.vent_free_day is null then pop.icu_los_day else vent.vent_free_day  end as vent_free_day
@@ -1653,47 +1655,60 @@ pop.*
 , hct.hct_lowest
 , hct.hct_highest
 , hct.hct_abnormal_flg
+
+
 , wbc.wbc_first
+, coalesce(wbc.wbc_first,0) as wbc_first_coded
 --, wbc.wbc_lowest
 --, wbc.wbc_highest
 , wbc.wbc_abnormal_flg
 , hgb.hgb_first
+, coalesce(hgb.hgb_first, 0) as hgb_first_coded
 --, hgb.hgb_lowest
 --, hgb.hgb_highest
 , hgb.hgb_abnormal_flg
 , platelet.platelet_first
+, coalesce(platelet.platelet_first, 0) as platelet_first_coded
 --, platelet.platelet_lowest
 --, platelet.platelet_highest
 , platelet.platelet_abnormal_flg
 , sodium.sodium_first
+, coalesce(sodium.sodium_first, 0) as sodium_first_coded
 --, sodium.sodium_lowest
 --, sodium.sodium_highest
 , sodium.sodium_abnormal_flg
 , potassium.potassium_first
+, coalesce(potassium.potassium_first, 0) as potassium_first_coded
 --, potassium.potassium_lowest
 --, potassium.potassium_highest
 , potassium.potassium_abnormal_flg
 , tco2.tco2_first
+, coalesce(tco2.tco2_first, 0) as tco2_first_coded
 --, tco2.tco2_lowest
 --, tco2.tco2_highest
 , tco2.tco2_abnormal_flg
 , chloride.chloride_first
+, coalesce(chloride.chloride_first, 0) as chloride_first_coded
 --, chloride.chloride_lowest
 --, chloride.chloride_highest
 , chloride.chloride_abnormal_flg
 , bun.bun_first
+, coalesce(bun.bun_first, 0) as bun_first_coded
 --, bun.bun_lowest
 --, bun.bun_highest
 , bun.bun_abnormal_flg
 , creatinine.creatinine_first
+, coalesce(creatinine.creatinine_first, 0) as creatinine_first_coded
 --, creatinine.creatinine_lowest
 --, creatinine.creatinine_highest
 , creatinine.creatinine_abnormal_flg
 , po2.po2_first
+, coalesce(po2.po2_first, 0) as po2_first_coded
 --, po2.po2_lowest
 --, po2.po2_highest
 , po2.po2_abnormal_flg
 , pco2.pco2_first
+, coalesce(pco2.pco2_first, 0) as pco2_first_coded
 --, pco2.pco2_lowest
 --, pco2.pco2_highest
 , pco2.pco2_abnormal_flg
