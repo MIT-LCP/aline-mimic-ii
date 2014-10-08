@@ -51,7 +51,7 @@ estat gof, group(10) table
 
 program drop crossval
 crossval aline_flg age i.gender_num weight_first sapsi_first sofa_first ///
-i.service_num day_icu_intime_num hour_icu_intime ///
+i.service_num i.day_icu_intime_num hour_icu_intime ///
 i.anes_b4_aline ///
 i.chf_flg i.afib_flg i.renal_flg i.liver_flg i.copd_flg i.cad_flg i.stroke_flg i.mal_flg i.resp_flg ///
 map_1st hr_1st spo2_1st temp_1st ///
@@ -71,24 +71,9 @@ pco2_first i.pco2_abnormal_flg, numgrps(10)
 //Reduced model
 
 
-/*logit aline_flg sofa_first ///
-i.service_num ///
-i.anes_12hr_flg ///
- map_lowest ///
-wbc_lowest ///
-hgb_first hgb_lowest ///
-i.sodium_abnormal_flg ///
-potassium_first  ///
-i.tco2_abnormal_flg ///
-chloride_first, or*/
-
-
-
-
 program drop crossval
 crossval aline_flg age weight_first sapsi_first sofa_first ///
-i.service_num day_icu_intime_num hour_icu_intime ///
-i.anes_b4_aline ///
+i.service_num i.day_icu_intime_num hour_icu_intime ///
 i.chf_flg i.afib_flg i.renal_flg i.liver_flg i.copd_flg i.cad_flg i.stroke_flg i.mal_flg i.resp_flg ///
 map_1st hr_1st spo2_1st temp_1st ///
 wbc_first ///
@@ -107,9 +92,8 @@ graph save Graph "/Users/mornin/Dropbox/aLin/stata/April_2014/roc.gph",replace
 //graph save Graph "/Users/mornin/Dropbox/aLin/stata/April_2014/roc.png",replace
 
 
-logit aline_flg age weight_first sapsi_first sofa_first ///
-i.service_num day_icu_intime_num hour_icu_intime ///
-i.anes_b4_aline ///
+logit aline_flg age weight_first sofa_first ///
+i.service_num i.day_icu_intime_num hour_icu_intime ///
 i.chf_flg i.afib_flg i.renal_flg i.liver_flg i.copd_flg i.cad_flg i.stroke_flg i.mal_flg i.resp_flg ///
 map_1st hr_1st spo2_1st temp_1st ///
 wbc_first ///
@@ -128,10 +112,24 @@ lroc, nograph
 estat gof, group(35) table
 
 drop phat
-predict phat1
+predict phat
+
+// historgram plots for unmatched data
+dpplot phat if aline_flg==0, dist(Weibull) plot(histogram phat if aline_flg==0, bin(20))
+dpplot phat if aline_flg==1, dist(Weibull) plot(histogram phat if aline_flg==1, bin(20))
+
+betafit phat if aline_flg==0
+dpplot phat if aline_flg==0, dist(beta) param(`e(alpha)' `e(beta)') plot(histogram phat if aline_flg==0, bin(20))
+
+betafit phat if aline_flg==1
+dpplot phat if aline_flg==1, dist(beta) param(`e(alpha)' `e(beta)') plot(histogram phat if aline_flg==1, bin(20))
+
+tabulate dnr_adm_flg aline_flg, column exact
+tabulate dnr_switch_flg aline_flg, column exact
+
 
 /////// replace missing values with median /////////
-centile map_1st
+/*centile map_1st
 replace map_1st=r(c_1) if map_1st==.
 
 centile hr_1st
@@ -181,7 +179,8 @@ predict phat2
 drop if phat2==.
 psmatch2 aline_flg, p(phat2) cal(0.01) noreplacement
 drop if _weight==.
-save "/Users/mornin/Dropbox/Alin/stata/Sep_2014/mv_matched_cohort_sep14.dta", replace
+save "/Users/mornin/Dropbox/Alin/stata/Sep_2014/mv_matched_cohort_sep14.dta", replace */
+
 /////////////Coded model///////////
 /*
 replace wbc_first= wbc_first_coded
@@ -208,8 +207,14 @@ drop if _weight==.
 
 tabulate aline_flg
 
-generate mort_28_flg=0
-replace mort_28_flg=1 if mort_day<=28
+//generate mort_28_flg=0
+//replace mort_28_flg=1 if mort_day<=28
+
+betafit phat if aline_flg==0
+dpplot phat if aline_flg==0, dist(beta) param(`e(alpha)' `e(beta)') plot(histogram phat if aline_flg==0, bin(20))
+
+betafit phat if aline_flg==1
+dpplot phat if aline_flg==1, dist(beta) param(`e(alpha)' `e(beta)') plot(histogram phat if aline_flg==1, bin(20))
 
 tabulate day_28_flg aline_flg, column exact
 tabulate icu_exp_flg aline_flg, column exact
@@ -228,6 +233,9 @@ tabulate cad_flg aline_flg, column exact
 tabulate stroke_flg aline_flg, column exact
 tabulate mal_flg aline_flg, column exact
 tabulate resp_flg aline_flg, column exact
+
+tabulate dnr_adm_flg aline_flg, column exact
+tabulate dnr_switch_flg aline_flg, column exact
 
 
 generate icu_los_day_cal= icu_los_day
@@ -272,6 +280,10 @@ summarize vent_day if aline_flg ==0 & icu_exp_flg ==0,detail
 summarize vent_day if aline_flg ==1 & icu_exp_flg ==0,detail
 ranksum vent_day if icu_exp_flg ==0, by(aline_flg)
 
+summarize vent_day if aline_flg ==0 & icu_exp_flg ==1,detail
+summarize vent_day if aline_flg ==1 & icu_exp_flg ==1,detail
+ranksum vent_day if icu_exp_flg ==1, by(aline_flg)
+
 summarize vent_free_day if aline_flg ==0 ,detail
 summarize vent_free_day if aline_flg ==1 ,detail
 ranksum vent_free_day, by(aline_flg)
@@ -279,6 +291,15 @@ ranksum vent_free_day, by(aline_flg)
 summarize vaso_free_day if aline_flg ==0 ,detail
 summarize vaso_free_day if aline_flg ==1 ,detail
 ranksum vaso_free_day, by(aline_flg)
+
+summarize vaso_day if aline_flg ==0 & icu_exp_flg ==0,detail
+summarize vaso_day if aline_flg ==1 & icu_exp_flg ==0,detail
+ranksum vaso_day if icu_exp_flg ==0, by(aline_flg)
+
+summarize vaso_day if aline_flg ==0 & icu_exp_flg ==1,detail
+summarize vaso_day if aline_flg ==1 & icu_exp_flg ==1,detail
+ranksum vaso_day if icu_exp_flg ==1, by(aline_flg)
+
 
 generate anes_day_cal=anes_day //31 days at 95%, remove outliers
 replace anes_day_cal=9.83 if hosp_exp_flg ==1
