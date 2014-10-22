@@ -4,7 +4,9 @@ import excel "/Users/mornin/Dropbox/aLin/github/Aline/Extracted Data/aline_mimic
 sheet("Export Worksheet") firstrow case(lower) clear
 
 //drop if vent_b4_aline==0
+//drop if vent_flg ==0
 drop if vent_1st_24hr==0
+
 
 drop if sepsis_flg ==1
 
