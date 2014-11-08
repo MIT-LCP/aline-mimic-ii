@@ -171,17 +171,18 @@ summarize abg_count_norm if aline_flg ==1 ,detail
 ranksum abg_count_norm, by(aline_flg)
 ttest abg_count_norm, by(aline_flg)
 
-summarize fluid_day_1 if aline_flg ==0 ,detail
+/*summarize fluid_day_1 if aline_flg ==0 ,detail
 summarize fluid_day_1 if aline_flg ==1 ,detail
 ranksum fluid_day_1, by(aline_flg)
 
 summarize fluid_3days_raw if aline_flg ==0 ,detail
 summarize fluid_3days_raw if aline_flg ==1 ,detail
-ranksum fluid_3days_raw, by(aline_flg)
+ranksum fluid_3days_raw, by(aline_flg)*/
 
 summarize iv_day_1 if aline_flg ==0 ,detail
 summarize iv_day_1 if aline_flg ==1 ,detail
 ranksum iv_day_1, by(aline_flg)
+ttest iv_day_1, by(aline_flg)
 
 summarize iv_3days_raw if aline_flg ==0 ,detail
 summarize iv_3days_raw if aline_flg ==1 ,detail

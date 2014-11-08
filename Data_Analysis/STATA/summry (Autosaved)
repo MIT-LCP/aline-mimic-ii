@@ -21,7 +21,7 @@ drop if service_num>1
 //drop if vaso_b4_aline ==1
 
 
-save "/Users/mornin/Dropbox/aLin/github/Aline/Extracted Data/full_cohort_data.dta", replace
+save "/Users/mornin/Dropbox/aLin/github/Aline/Data_Extraction/full_cohort_data.dta", replace
 
 
 //vaso cohort, no mv

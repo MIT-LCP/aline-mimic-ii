@@ -20,7 +20,9 @@
 --drop table aline_mimic_data_march14;
 --create table aline_mimic_data_march14 as
 --create table aline_mimic_data_apr14 as
-create table aline_mimic_data_sep14 as
+
+drop table aline_mimic_data_oct14;
+create table aline_mimic_data_oct14 as
 with population_1 as
 (select * from mornin.aline_mimic_COHORT_feb14
 --where icustay_id<100
@@ -571,10 +573,10 @@ order by 1
  left join mimic2v26.chartevents ch 
   on pop.icustay_id=ch.icustay_id 
     and ch.itemid in (52,456)
-    and ch.charttime <= pop.icustay_intime+3/24
+   --and ch.charttime <= pop.icustay_intime+3/24
   order by ch.charttime
  )
- --select * from map_group_1;
+ --select count(*) from map_group_1;
 
  , map_group as
  (select distinct icustay_id
@@ -582,9 +584,10 @@ order by 1
  --, first_value(bp) over (partition by icustay_id order by bp asc) as map_lowest
  --, first_value(bp) over (partition by icustay_id order by bp desc) as map_highest
  from map_group_1
+ where bp is not null
  )
 
---select * from map_group;
+--select count(*) from map_group; --22021
 
 -------- Temperature -------------
 
@@ -596,7 +599,7 @@ order by 1
  left join mimic2v26.chartevents ch 
   on pop.icustay_id=ch.icustay_id 
     and ch.itemid in (678,679)
-    and ch.charttime <= pop.icustay_intime+3/24
+    --and ch.charttime <= pop.icustay_intime+3/24
  )
  
  --select * from map_group;
@@ -606,9 +609,10 @@ order by 1
 -- , first_value(temp) over (partition by icustay_id order by temp asc) as temp_lowest
 -- , first_value(temp) over (partition by icustay_id order by temp desc) as temp_highest
  from t_group_1
+ where temp is not null
  )
 
---select * from t_group;
+--select count(*) from t_group; --22007
 
 
 -------- HR -------------
@@ -621,7 +625,7 @@ order by 1
  left join mimic2v26.chartevents ch 
   on pop.icustay_id=ch.icustay_id 
     and ch.itemid =211
-    and ch.charttime <= pop.icustay_intime+3/24
+    --and ch.charttime <= pop.icustay_intime+3/24
  )
  
  , hr_group as
@@ -630,7 +634,10 @@ order by 1
  --, first_value(hr) over (partition by icustay_id order by hr asc) as hr_lowest
  --, first_value(hr) over (partition by icustay_id order by hr desc) as hr_highest
  from hr_group_1
+ where hr is not null
  )
+
+--select count(*) from hr_group; --22022
 
 --select * from hr_group where hr_1st is not null;
 
@@ -645,7 +652,7 @@ order by 1
  left join mimic2v26.chartevents ch 
   on pop.icustay_id=ch.icustay_id 
     and ch.itemid =113
-    and ch.charttime <= pop.icustay_intime+3/24
+    --and ch.charttime <= pop.icustay_intime+3/24
  )
  
  , cvp_group as
@@ -654,6 +661,7 @@ order by 1
 -- , first_value(cvp) over (partition by icustay_id order by cvp asc) as cvp_lowest
 -- , first_value(cvp) over (partition by icustay_id order by cvp desc) as cvp_highest
  from cvp_group_1
+ where cvp is not null
  )
 
 ---select * from cvp_group where cvp_1st is not null; --2176 excluded
@@ -668,7 +676,7 @@ order by 1
  left join mimic2v26.chartevents ch 
   on pop.icustay_id=ch.icustay_id 
     and ch.itemid =646
-    and ch.charttime <= pop.icustay_intime+3/24
+    --and ch.charttime <= pop.icustay_intime+3/24
  )
  
  , spo2_group as
@@ -677,6 +685,7 @@ order by 1
 -- , first_value(spo2) over (partition by icustay_id order by spo2 asc) as spo2_lowest
 -- , first_value(spo2) over (partition by icustay_id order by spo2 desc) as spo2_highest
  from spo2_group_1
+ where spo2 is not null
  )
  
 --select * from spo2_group;
@@ -761,7 +770,7 @@ join mimic2v26.labevents lab
   on pop.hadm_id=lab.hadm_id 
   and lab.itemid in (50316,50468)
   and lab.valuenum is not null
-  and lab.charttime<=pop.ICUSTAY_INTIME+3/24
+  --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
 order by 1
 )
 
@@ -780,7 +789,7 @@ from lab_wbc_1
 order by 1
 )
 
---select * from lab_wbc; --19135
+--select count(*) from lab_wbc; --22364
 
 --- hemoglobin ----
 
@@ -803,7 +812,7 @@ join mimic2v26.labevents lab
   and lab.itemid in (50386,50007,50184)
   --(50377,50386,50388,50391,50411,50454,50054,50003,50007,50011,50184,50183,50387,50389,50390,50412)
   and lab.valuenum is not null
-  and lab.charttime<=pop.ICUSTAY_INTIME+3/24
+  --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
   and pop.gender_num is not null
 order by 1
 )
@@ -845,7 +854,7 @@ join mimic2v26.labevents lab
   on pop.hadm_id=lab.hadm_id 
   and lab.itemid = 50428
   and lab.valuenum is not null
-  and lab.charttime<=pop.ICUSTAY_INTIME+3/24
+  --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
   --and pop.gender_num is not null
 order by 1
 )
@@ -885,7 +894,7 @@ join mimic2v26.labevents lab
   on pop.hadm_id=lab.hadm_id 
   and lab.itemid in (50159, 50012) ---- 50012 is for blood gas
   and lab.valuenum is not null
-  and lab.charttime<=pop.ICUSTAY_INTIME+3/24
+  --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
   --and pop.gender_num is not null
 order by 1
 )
@@ -926,7 +935,7 @@ join mimic2v26.labevents lab
   on pop.hadm_id=lab.hadm_id 
   and lab.itemid in (50149, 50009) ---- 50009 is from blood gas
   and lab.valuenum is not null
-  and lab.charttime<=pop.ICUSTAY_INTIME+3/24
+  --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
   --and pop.gender_num is not null
 order by 1
 )
@@ -966,7 +975,7 @@ join mimic2v26.labevents lab
   on pop.hadm_id=lab.hadm_id 
   and lab.itemid in (50172, 50025,50022) --- (50025,50022,50172) the rest are from blood gas
   and lab.valuenum is not null
-  and lab.charttime<=pop.ICUSTAY_INTIME+3/24
+  --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
   --and pop.gender_num is not null
 order by 1
 )
@@ -1005,7 +1014,7 @@ join mimic2v26.labevents lab
   on pop.hadm_id=lab.hadm_id 
   and lab.itemid in (50083,50004) --- 50004 is from blood gas
   and lab.valuenum is not null
-  and lab.charttime<=pop.ICUSTAY_INTIME+3/24
+  --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
   --and pop.gender_num is not null
 order by 1
 )
@@ -1044,7 +1053,7 @@ join mimic2v26.labevents lab
   on pop.hadm_id=lab.hadm_id 
   and lab.itemid = 50177 
   and lab.valuenum is not null
-  and lab.charttime<=pop.ICUSTAY_INTIME+3/24
+  --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
   --and pop.gender_num is not null
 order by 1
 )
@@ -1085,7 +1094,7 @@ join mimic2v26.labevents lab
   on pop.hadm_id=lab.hadm_id 
   and lab.itemid = 50090 
   and lab.valuenum is not null
-  and lab.charttime<=pop.ICUSTAY_INTIME+3/24
+  --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
   and pop.gender_num is not null
 order by 1
 )
@@ -1126,7 +1135,7 @@ join mimic2v26.labevents lab
   on pop.hadm_id=lab.hadm_id 
   and lab.itemid = 50010 
   and lab.valuenum is not null
-  and lab.charttime<=pop.ICUSTAY_INTIME+3/24
+  --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
   --and pop.gender_num is not null
 order by 1
 )
@@ -1164,7 +1173,7 @@ join mimic2v26.labevents lab
   on pop.hadm_id=lab.hadm_id 
   and lab.itemid = 50018 
   and lab.valuenum is not null
-  and lab.charttime<=pop.ICUSTAY_INTIME+3/24
+  --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
   --and pop.gender_num is not null
 order by 1
 )
@@ -1202,7 +1211,7 @@ join mimic2v26.labevents lab
   on pop.hadm_id=lab.hadm_id 
   and lab.itemid = 50019 
   and lab.valuenum is not null
-  and lab.charttime<=pop.ICUSTAY_INTIME+3/24
+  --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
   --and pop.gender_num is not null
 order by 1
 )
@@ -1240,7 +1249,7 @@ join mimic2v26.labevents lab
   on pop.hadm_id=lab.hadm_id 
   and lab.itemid = 50016 
   and lab.valuenum is not null
-  and lab.charttime<=pop.ICUSTAY_INTIME+3/24
+  --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
   --and pop.gender_num is not null
 order by 1
 )
@@ -1449,7 +1458,98 @@ join mimic2v26.chartevents ch
 
 --select * from restraint_group; --11719
 
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+-------------------------- Care code data -------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
 
+---- care code ----
+, code_adm as
+(select 
+distinct pop.icustay_id
+, first_value(ch.value1) over (partition by ch.icustay_id order by ch.charttime asc) as first_code
+from population pop 
+join mimic2v26.chartevents ch 
+  on ch.icustay_id=pop.icustay_id 
+  and ch.itemid=128
+  and ch.value1 is not null
+--and lower(value1) like '%resuscita%'
+)
+
+--select * from dnr_adm_1;
+, dnr_adm as
+(select distinct icustay_id
+--, first_code
+, 1 as flg
+from code_adm
+where lower(first_code) like '%resuscita%'
+)
+
+--select * from dnr_adm;--961
+
+, dnr as
+(select 
+distinct pop.icustay_id
+, 1 as flg
+from population pop 
+join mimic2v26.chartevents ch 
+  on ch.icustay_id=pop.icustay_id 
+  and ch.itemid=128
+  and lower(value1) like '%resuscita%'
+)
+
+--select count(*) from dnr; --2561
+, dnr_switch as
+(select * from dnr
+minus
+select * from dnr_adm
+)
+
+--select * from dnr_switch; --1600
+
+
+, cmo as
+(select 
+distinct pop.icustay_id
+--, value1
+, 1 as flg
+from population pop 
+join mimic2v26.chartevents ch 
+  on ch.icustay_id=pop.icustay_id 
+  and ch.itemid=128
+  and lower(value1) like '%comfort%'
+)
+
+--select * from cmo; --910
+, cmo_adm as
+(select  distinct icustay_id
+--, first_code
+, 1 as flg
+from code_adm
+where lower(first_code) like '%comfort%'
+)
+
+--select * from cmo_adm; --15
+
+, cmo_switch as
+(select * from cmo
+minus
+select * from cmo_adm
+)
+
+--select * from cmo_switch; --895
+
+, dnr_cmo_switch as
+(select distinct icustay_id, flg
+from (
+  select * from cmo_switch
+    union
+  select * from dnr_switch
+)
+)
+
+--select * from dnr_cmo_switch; --2053
 
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
@@ -1729,6 +1829,13 @@ pop.*
 , rbc1.rbc_day_1
 , rbct.rbc_total
 
+, coalesce(da.flg,0) as dnr_adm_flg
+, coalesce(ds.flg,0) as dnr_switch_flg
+, coalesce(cs.flg,0) as cmo_switch_flg
+, coalesce(dcs.flg,0) as dnr_cmo_switch_flg
+, 1 as dummy
+
+
 from population pop
 left join vent_group vent on vent.icustay_id=pop.icustay_id
 --left join vent_12hr_group vent12 on vent12.icustay_id=pop.icustay_id
@@ -1777,6 +1884,12 @@ left join fluid_in fluid on fluid.icustay_id=pop.icustay_id
 left join IV_in IV on IV.icustay_id=pop.icustay_id
 left join rbc_day_1 rbc1 on rbc1.icustay_id=pop.icustay_id
 left join rbc_total rbct on rbct.icustay_id=pop.icustay_id
+
+left join dnr_adm da on da.icustay_id=pop.icustay_id
+left join dnr_switch ds on ds.icustay_id=pop.icustay_id
+left join cmo_switch cs on cs.icustay_id=pop.icustay_id
+left join dnr_cmo_switch dcs on dcs.icustay_id=pop.icustay_id
+
 )
 
 select * from aline_data;
