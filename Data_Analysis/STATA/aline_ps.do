@@ -171,17 +171,18 @@ summarize abg_count_norm if aline_flg ==1 ,detail
 ranksum abg_count_norm, by(aline_flg)
 ttest abg_count_norm, by(aline_flg)
 
-summarize fluid_day_1 if aline_flg ==0 ,detail
+/*summarize fluid_day_1 if aline_flg ==0 ,detail
 summarize fluid_day_1 if aline_flg ==1 ,detail
 ranksum fluid_day_1, by(aline_flg)
 
 summarize fluid_3days_raw if aline_flg ==0 ,detail
 summarize fluid_3days_raw if aline_flg ==1 ,detail
-ranksum fluid_3days_raw, by(aline_flg)
+ranksum fluid_3days_raw, by(aline_flg)*/
 
 summarize iv_day_1 if aline_flg ==0 ,detail
 summarize iv_day_1 if aline_flg ==1 ,detail
 ranksum iv_day_1, by(aline_flg)
+ttest iv_day_1, by(aline_flg)
 
 summarize iv_3days_raw if aline_flg ==0 ,detail
 summarize iv_3days_raw if aline_flg ==1 ,detail
@@ -236,6 +237,58 @@ stset sd, failure(censor_flg_28==0)
 sts graph, by(aline_flg)
 sts test aline_flg, logrank
 
-restore
+
+// competing event cif for icu los
+drop sd
+gen sd=icu_los_day
+replace sd=29 if sd>28
+drop censor_icu_flg_28
+gen censor_icu_flg_28 = 0
+replace censor_icu_flg_28=1 if sd>28
+
+drop event_flg_28
+gen event_flg_28=0
+replace event_flg_28=1 if censor_icu_flg_28==0
+replace event_flg_28=2 if censor_flg_28==0
+
+stset sd, failure(event_flg_28==1)
+stcrreg aline_flg, compete(event_flg_28==2 )
+stcurve, cif at1(aline_flg=0) at2(aline_flg=1)
+
+// competing event cif for hospital los
+drop sd
+gen sd=hospital_los_day
+replace sd=29 if sd>28
+drop censor_hosp_flg_28
+gen censor_hosp_flg_28 = 0
+replace censor_hosp_flg_28=1 if sd>28
+
+drop event_flg_28
+gen event_flg_28=0
+replace event_flg_28=1 if censor_hosp_flg_28==0
+replace event_flg_28=2 if censor_flg_28==0
+
+stset sd, failure(event_flg_28==1)
+stcrreg aline_flg, compete(event_flg_28==2 )
+stcurve, cif at1(aline_flg=0) at2(aline_flg=1)
+
+// competing event cif for vent length
+drop sd
+gen sd=icu_los_day-vent_free_day
+replace sd=29 if sd>28
+gen censor_vent_flg_28 = 0
+replace censor_vent_flg_28=1 if sd>28
+
+drop event_flg_28
+gen event_flg_28=0
+replace event_flg_28=1 if censor_vent_flg_28==0
+replace event_flg_28=2 if censor_flg_28==0
+
+stset sd, failure(event_flg_28==1)
+stcrreg aline_flg, compete(event_flg_28==2 )
+stcurve, cif at1(aline_flg=0) at2(aline_flg=1)
+
+
+
 
 
