@@ -85,6 +85,12 @@ tabulate gender_num aline_flg, column exact
 tabulate service_num aline_flg, column exact
 tabulate dnr_cmo_switch_flg aline_flg, column exact
 
+tabulate copd_flg aline_flg, column exact
+tabulate chf_flg aline_flg, column exact
+tabulate pneumonia_flg aline_flg, column exact
+tabulate ards_flg aline_flg, column exact
+
+
 logit day_28_flg i.aline_flg, or
 
 

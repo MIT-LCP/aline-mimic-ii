@@ -1,7 +1,7 @@
 /*
   
   Created on   : Dec 2012 by Mornin Feng
-  Last updated : August 2013
+  Last updated : nov 2014
  Extract data for echo project and aline project
 
 */
@@ -22,7 +22,7 @@
 --create table aline_mimic_data_apr14 as
 
 drop table aline_mimic_data_oct14;
-create table aline_mimic_data_oct14 as
+create table aline_mimic_data_nov14 as
 with population_1 as
 (select * from mornin.aline_mimic_COHORT_feb14
 --where icustay_id<100
@@ -558,6 +558,31 @@ order by 1
 
 --select * from resp_failure_group;
 
+, ards_group as
+(select distinct pop.hadm_id, pop.icustay_id,  1 as flg
+--, icd9.code
+from population pop
+join mimic2v26.icd9 icd9 on icd9.hadm_id=pop.hadm_id
+where icd9.code = '518.82' or icd9.code = '518.5'
+order by 1
+)
+
+--select * from ards; --1434
+
+, pneumonia_group as
+(select distinct pop.hadm_id, pop.icustay_id,  1 as flg
+--, icd9.icd9_numeric as code
+from population pop
+join icd9code icd9 on icd9.hadm_id=pop.hadm_id
+where (icd9.icd9_numeric between 486 and 488.81) 
+  or (icd9.icd9_numeric>= 480 and  icd9.icd9_numeric<481)
+  or (icd9.icd9_numeric>= 482 and  icd9.icd9_numeric<483) 
+  or (icd9.icd9_numeric between 506 and 507.8) 
+order by 1
+)
+
+--select distinct code from pneumonia_group;
+--select * from pneumonia_group; --4807
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 -------------------------- vital signs variables -----------------------------------------------------
@@ -1733,6 +1758,9 @@ pop.*
 , coalesce(stroke.flg,0) as stroke_flg
 , coalesce(mal.flg,0) as mal_flg
 , coalesce(resp.flg,0) as resp_flg
+, coalesce(ards.flg,0) as ards_flg
+, coalesce(pne.flg,0) as pneumonia_flg
+
 --
 , m.map_1st
 --, m.map_lowest
@@ -1854,6 +1882,10 @@ left join cad_group cad on cad.hadm_id=pop.hadm_id
 left join stroke_group stroke on stroke.hadm_id=pop.hadm_id
 left join malignancy_group mal on mal.hadm_id=pop.hadm_id
 left join resp_failure_group resp on resp.hadm_id=pop.hadm_id
+left join ards_group ards on ards.hadm_id=pop.hadm_id
+left join pneumonia_group pne on pne.hadm_id=pop.hadm_id
+
+
 --
 left join map_group m on m.icustay_id=pop.icustay_id
 left join hr_group hr on hr.icustay_id=pop.icustay_id
