@@ -25,7 +25,7 @@ graph save Graph "/Users/mornin/Dropbox/aLin/stata/April_2014/roc.gph",replace
 
 
 logit aline_flg age weight_first sapsi_first sofa_first ///
-i.service_num day_icu_intime_num hour_icu_intime ///
+i.service_num i.day_icu_intime_num i.hour_icu_intime ///
 i.chf_flg i.afib_flg i.renal_flg i.liver_flg i.copd_flg i.cad_flg i.stroke_flg i.mal_flg i.resp_flg ///
 map_1st hr_1st spo2_1st temp_1st ///
 wbc_first ///
@@ -67,8 +67,9 @@ drop if phat==.
 save "/Users/mornin/Dropbox/aLin/github/Aline/Data_Extraction/ps_cohort.dta", replace
 use "/Users/mornin/Dropbox/aLin/github/Aline/Data_Extraction/ps_cohort.dta", clear
 
-psmatch2 aline_flg, p(phat) cal(0.01*'cal') noreplacement
+psmatch2 aline_flg, p(phat) cal(0.01) noreplacement
 
+psmatch2 aline_flg, p(phat) cal(0.01)
 
 logit day_28_flg i.aline_flg phat, or
 
