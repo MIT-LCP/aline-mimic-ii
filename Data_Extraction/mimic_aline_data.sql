@@ -21,11 +21,11 @@
 --create table aline_mimic_data_march14 as
 --create table aline_mimic_data_apr14 as
 
-drop table aline_mimic_data_oct14;
-create table aline_mimic_data_nov14 as
+drop table aline_mimic_data_april15;
+create table aline_mimic_data_april15 as
 with population_1 as
 (select * from mornin.aline_mimic_COHORT_feb14
---where icustay_id<100
+--where icustay_id<10
 --where initial_aline_flg = 0
 )
 
@@ -47,6 +47,8 @@ pop.*
 --, icud.gender as gender
 , case when icud.gender is null then null
   when icud.gender = 'M' then 1 else 0 end as gender_num
+, icud.gender as gender
+, dd.ETHNICITY_DESCR as ethnic_group
 , icud.WEIGHT_FIRST
 , bmi.bmi
 , icud.SAPSI_FIRST
@@ -70,6 +72,7 @@ from population_1 pop
 left join  mimic2v26.icustay_detail icud on pop.icustay_id = icud.icustay_id
 left join mimic2devel.obesity_bmi bmi on bmi.icustay_id=pop.icustay_id
 left join MIMIC2DEVEL.d_patients d on d.subject_id=pop.subject_id
+left join mimic2v26.demographic_detail dd on dd.subject_id=pop.subject_id
 )
 
 --select distinct service_unit from population_2;
@@ -82,10 +85,47 @@ left join MIMIC2DEVEL.d_patients d on d.subject_id=pop.subject_id
 , case when p.mort_day<=28 then 1 else 0 end as day_28_flg
 , coalesce(p.mort_day, 731) as mort_day_censored
 , case when p.mort_day<=730 then 0 else 1 end as censor_flg 
-from population_2 p where icu_los_day>=0.5 --- stayed in icu for more than 12 hours
+from population_2 p 
+where icu_los_day>=0.5 --- stayed in icu for more than 12 hours
+--and icustay_id<100
 )
 
 --select * from population; --6517
+
+
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+-------------------------- Aline Duration  -----------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+
+
+, aline_duration1 as
+(select distinct p.icustay_id
+, first_value(ch.charttime) over (partition by p.icustay_id order by ch.charttime asc) as aline_begintime
+, first_value(ch.charttime) over (partition by p.icustay_id order by ch.charttime desc) as aline_endtime
+--, ch.charttime
+, p.icustay_intime
+, p.icu_los_day
+from population p
+join mimic2v26.chartevents ch 
+  on p.icustay_id=ch.icustay_id 
+  and ch.itemid in (51,52)
+  and (ch.value1num is not null or ch.value2num is not null)
+--order by 1
+)
+
+, aline_duration as
+(select 
+icustay_id
+, round((extract(day from (aline_endtime-aline_begintime))
+    +extract(hour from  (aline_endtime-aline_begintime))/24
+     +extract(minute from  (aline_endtime-aline_begintime))/24/60)/icu_los_day,2) as aline_duration
+, icu_los_day
+from aline_duration1
+)
+
+--select * from aline_duration;
 
 
 --------------------------------------------------------------------------------------------------------
@@ -310,6 +350,11 @@ pop.icustay_id
 , pop.icu_los_day
 , first_value(med.charttime) over (partition by pop.icustay_id order by med.charttime asc) as begin_time
 , first_value(med.charttime) over (partition by pop.icustay_id order by med.charttime desc) as end_time
+, case when med.itemid in (118,149,150,308) then 'Fentanyl'
+        when med.itemid = 124 then 'Midazolam' 
+        when med.itemid= 131 then 'Propofol'
+        when med.itemid= 163 then 'Dilaudid'
+        end as label
 , 1 as flg
 , pop.INITIAL_ALINE_FLG
 , pop.ALINE_FLG
@@ -349,13 +394,13 @@ from anes_group_1 a
 , anes_group as
 (select a.*
 --, case when
-, case when anes_start_day<=0.125 then 1 else 0 end as anes_1st_3hr_flg
-, case when anes_start_day<=0.25 then 1 else 0 end as anes_1st_6hr_flg
-, case when anes_start_day<=0.5 then 1 else 0 end as anes_1st_12hr_flg 
+--, case when anes_start_day<=0.125 then 1 else 0 end as anes_1st_3hr_flg
+--, case when anes_start_day<=0.25 then 1 else 0 end as anes_1st_6hr_flg
+--, case when anes_start_day<=0.5 then 1 else 0 end as anes_1st_12hr_flg 
 , case when ALINE_FLG=1 and INITIAL_ALINE_FLG =0 and anes_start_day<=ALINE_TIME_DAY then 1 
        when ALINE_FLG=1 and INITIAL_ALINE_FLG =0 and anes_start_day>ALINE_TIME_DAY then 0
-       when ALINE_FLG=0 and INITIAL_ALINE_FLG =0 and anes_start_day<=(2/24) then 1
-       when ALINE_FLG=0 and INITIAL_ALINE_FLG =0 and anes_start_day>(2/24) then 0
+       when ALINE_FLG=0 and INITIAL_ALINE_FLG =0 and anes_start_day<=(6/24) then 1
+       when ALINE_FLG=0 and INITIAL_ALINE_FLG =0 and anes_start_day>(6/24) then 0
        else NULL
             end as anes_b4_aline
 from anes_group_2 a
@@ -364,29 +409,22 @@ from anes_group_2 a
 --select median(anes_start_day) from anes_group;
 --select * from anes_group;
 
---, anes_group as
---(select distinct
---icustay_id
---, flg
---, anes_day
---, icu_los_day
-----, (icu_los_day-time_diff_day)
---, case when (icu_los_day-anes_day)<0 then 0 else (icu_los_day-anes_day) end as anes_free_Day
---from anes_group_2
---)
+, sedative_drug as
+(
+select * from (
+  select icustay_id,flg,label
+  from anes_group
+)
+pivot
+(
+  max(flg)
+  for label in ('Fentanyl' as Fentanyl, 'Midazolam' as Midazolam, 'Propofol' as Propofol, 'Dilaudid' as Dilaudid)
+)
+)
 
---select * from anes_group order by 5;
+--select * from sedative_drug;
 
---------------  label anesthetic patients for 1st 12 hours ----------------------------
 
---, anes_12hr_group as
---(select distinct icustay_id
---, 1 as flg
---from anes_group_1
---where begin_time <= ICUSTAY_INTIME+12/24
---)
-
---select * from anes_12hr_group; --2016 --2583
 
 ------------------------------------- dobutamine medication group (can be excluded) -------------------
 
@@ -838,7 +876,7 @@ join mimic2v26.labevents lab
   --(50377,50386,50388,50391,50411,50454,50054,50003,50007,50011,50184,50183,50387,50389,50390,50412)
   and lab.valuenum is not null
   --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
-  and pop.gender_num is not null
+  --and pop.gender_num is not null
 order by 1
 )
 
@@ -880,7 +918,7 @@ join mimic2v26.labevents lab
   and lab.itemid = 50428
   and lab.valuenum is not null
   --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
-  --and pop.gender_num is not null
+  ----and pop.gender_num is not null
 order by 1
 )
 --select distinct itemid from lab_platelet_1;
@@ -920,7 +958,7 @@ join mimic2v26.labevents lab
   and lab.itemid in (50159, 50012) ---- 50012 is for blood gas
   and lab.valuenum is not null
   --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
-  --and pop.gender_num is not null
+  ----and pop.gender_num is not null
 order by 1
 )
 
@@ -961,7 +999,7 @@ join mimic2v26.labevents lab
   and lab.itemid in (50149, 50009) ---- 50009 is from blood gas
   and lab.valuenum is not null
   --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
-  --and pop.gender_num is not null
+  ----and pop.gender_num is not null
 order by 1
 )
 
@@ -1001,7 +1039,7 @@ join mimic2v26.labevents lab
   and lab.itemid in (50172, 50025,50022) --- (50025,50022,50172) the rest are from blood gas
   and lab.valuenum is not null
   --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
-  --and pop.gender_num is not null
+  ----and pop.gender_num is not null
 order by 1
 )
 
@@ -1040,7 +1078,7 @@ join mimic2v26.labevents lab
   and lab.itemid in (50083,50004) --- 50004 is from blood gas
   and lab.valuenum is not null
   --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
-  --and pop.gender_num is not null
+  ----and pop.gender_num is not null
 order by 1
 )
 
@@ -1079,7 +1117,7 @@ join mimic2v26.labevents lab
   and lab.itemid = 50177 
   and lab.valuenum is not null
   --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
-  --and pop.gender_num is not null
+  ----and pop.gender_num is not null
 order by 1
 )
 
@@ -1120,7 +1158,7 @@ join mimic2v26.labevents lab
   and lab.itemid = 50090 
   and lab.valuenum is not null
   --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
-  and pop.gender_num is not null
+  --and pop.gender_num is not null
 order by 1
 )
 
@@ -1144,6 +1182,234 @@ order by 1
 --select * from lab_creatinine; --19027
 
 
+--- glucose ---
+, lab_glucose as
+(select distinct pop.hadm_id
+, pop.icustay_id
+, lab.valueuom
+, first_value(lab.valuenum) over (partition by pop.hadm_id order by charttime asc) as glucose_first
+from population pop
+join mimic2v26.labevents lab 
+  on pop.hadm_id=lab.hadm_id 
+  and lab.itemid in (50006,50112)
+  and lab.valuenum is not null
+  --and pop.gender_num is not null
+order by 1
+)
+
+--select * from lab_glucose;
+
+
+--- calcium ---
+, lab_calcium as
+(select distinct pop.hadm_id
+, pop.icustay_id
+, lab.valueuom
+, first_value(lab.valuenum) over (partition by pop.hadm_id order by charttime asc) as calcium_first
+from population pop
+join mimic2v26.labevents lab 
+  on pop.hadm_id=lab.hadm_id 
+  and lab.itemid = 50079
+  and lab.valuenum is not null
+  --and pop.gender_num is not null
+order by 1
+)
+
+--select * from lab_calcium;
+
+--- magnesium ---
+, lab_magnesium as
+(select distinct pop.hadm_id
+, pop.icustay_id
+, lab.valueuom
+, first_value(lab.valuenum) over (partition by pop.hadm_id order by charttime asc) as magnesium_first
+from population pop
+join mimic2v26.labevents lab 
+  on pop.hadm_id=lab.hadm_id 
+  and lab.itemid = 50140
+  and lab.valuenum is not null
+  --and pop.gender_num is not null
+order by 1
+)
+
+--select * from lab_magnesium;
+
+
+--- phosphate ---
+, lab_phosphate as
+(select distinct pop.hadm_id
+, pop.icustay_id
+, lab.valueuom
+, first_value(lab.valuenum) over (partition by pop.hadm_id order by charttime asc) as phosphate_first
+from population pop
+join mimic2v26.labevents lab 
+  on pop.hadm_id=lab.hadm_id 
+  and lab.itemid = 50148
+  and lab.valuenum is not null
+  --and pop.gender_num is not null
+order by 1
+)
+
+--select * from lab_phosphate;
+
+
+--- AST ---
+, lab_AST as
+(select distinct pop.hadm_id
+, pop.icustay_id
+, lab.valueuom
+, first_value(lab.valuenum) over (partition by pop.hadm_id order by charttime asc) as AST_first
+from population pop
+join mimic2v26.labevents lab 
+  on pop.hadm_id=lab.hadm_id 
+  and lab.itemid = 50073
+  and lab.valuenum is not null
+  --and pop.gender_num is not null
+order by 1
+)
+
+--select * from lab_AST;
+
+--- ALT ---
+, lab_ALT as
+(select distinct pop.hadm_id
+, pop.icustay_id
+, lab.valueuom
+, first_value(lab.valuenum) over (partition by pop.hadm_id order by charttime asc) as ALT_first
+from population pop
+join mimic2v26.labevents lab 
+  on pop.hadm_id=lab.hadm_id 
+  and lab.itemid = 50062
+  and lab.valuenum is not null
+  --and pop.gender_num is not null
+order by 1
+)
+
+--select * from lab_ALT;
+
+
+--- LDH ---
+, lab_LDH as
+(select distinct pop.hadm_id
+, pop.icustay_id
+, lab.valueuom
+, first_value(lab.valuenum) over (partition by pop.hadm_id order by charttime asc) as LDH_first
+from population pop
+join mimic2v26.labevents lab 
+  on pop.hadm_id=lab.hadm_id 
+  and lab.itemid = 50134
+  and lab.valuenum is not null
+  --and pop.gender_num is not null
+order by 1
+)
+
+--select * from lab_LDH;
+
+--- bilirubin ---
+, lab_bilirubin as
+(select distinct pop.hadm_id
+, pop.icustay_id
+, lab.valueuom
+, first_value(lab.valuenum) over (partition by pop.hadm_id order by charttime asc) as bilirubin_first
+from population pop
+join mimic2v26.labevents lab 
+  on pop.hadm_id=lab.hadm_id 
+  and lab.itemid = 50170
+  and lab.valuenum is not null
+  --and pop.gender_num is not null
+order by 1
+)
+
+--select * from lab_bilirubin;
+
+
+
+-- ALP ---
+, lab_ALP as
+(select distinct pop.hadm_id
+, pop.icustay_id
+, lab.valueuom
+, first_value(lab.valuenum) over (partition by pop.hadm_id order by charttime asc) as ALP_first
+from population pop
+join mimic2v26.labevents lab 
+  on pop.hadm_id=lab.hadm_id 
+  and lab.itemid = 50061
+  and lab.valuenum is not null
+  --and pop.gender_num is not null
+order by 1
+)
+
+--select * from lab_ALP;
+
+-- albumin ---
+, lab_albumin as
+(select distinct pop.hadm_id
+, pop.icustay_id
+, lab.valueuom
+, first_value(lab.valuenum) over (partition by pop.hadm_id order by charttime asc) as albumin_first
+from population pop
+join mimic2v26.labevents lab 
+  on pop.hadm_id=lab.hadm_id 
+  and lab.itemid = 50060
+  and lab.valuenum is not null
+  --and pop.gender_num is not null
+order by 1
+)
+
+--select * from lab_albumin;
+
+-- troponin_t ---
+, lab_troponin_t as
+(select distinct pop.hadm_id
+, pop.icustay_id
+, lab.valueuom
+, first_value(lab.valuenum) over (partition by pop.hadm_id order by charttime asc) as troponin_t_first
+from population pop
+join mimic2v26.labevents lab 
+  on pop.hadm_id=lab.hadm_id 
+  and lab.itemid = 50189
+  and lab.valuenum is not null
+  --and pop.gender_num is not null
+order by 1
+)
+
+--select * from lab_troponin_t;
+
+
+-- CK ---
+, lab_CK as
+(select distinct pop.hadm_id
+, pop.icustay_id
+, lab.valueuom
+, first_value(lab.valuenum) over (partition by pop.hadm_id order by charttime asc) as CK_first
+from population pop
+join mimic2v26.labevents lab 
+  on pop.hadm_id=lab.hadm_id 
+  and lab.itemid = 50087
+  and lab.valuenum is not null
+  --and pop.gender_num is not null
+order by 1
+)
+
+--select * from lab_CK;
+
+-- BNP ---
+, lab_BNP as
+(select distinct pop.hadm_id
+, pop.icustay_id
+, lab.valueuom
+--, lab.value
+, first_value(lab.valuenum) over (partition by pop.hadm_id order by charttime asc) as BNP_first
+from population pop
+join mimic2v26.labevents lab 
+  on pop.hadm_id=lab.hadm_id 
+  and lab.itemid = 50195
+  --and lab.valuenum is not null
+order by 1
+)
+
+--select * from lab_BNP;
+
 --- Lactate ---
 , lab_lactate_1 as
 (select pop.hadm_id
@@ -1161,7 +1427,7 @@ join mimic2v26.labevents lab
   and lab.itemid = 50010 
   and lab.valuenum is not null
   --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
-  --and pop.gender_num is not null
+  ----and pop.gender_num is not null
 order by 1
 )
 
@@ -1175,7 +1441,7 @@ order by 1
 --, first_value(lactate) over (partition by hadm_id order by lactate desc) as lactate_highest
 --, first_value(abnormal_flg) over (partition by hadm_id order by abnormal_flg desc) lactate_abnormal_flg
 , lactate_first
-, case when lactate_first between 0.5 and 2.2 then 0 else 1 end as lactate_abnormal_flg
+--, case when lactate_first between 0.5 and 2.2 then 0 else 1 end as lactate_abnormal_flg
 from lab_lactate_1
 order by 1
 )
@@ -1199,7 +1465,7 @@ join mimic2v26.labevents lab
   and lab.itemid = 50018 
   and lab.valuenum is not null
   --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
-  --and pop.gender_num is not null
+  ----and pop.gender_num is not null
 order by 1
 )
 
@@ -1220,6 +1486,38 @@ order by 1
 
 --select * from lab_ph; --13266
 
+
+
+----- SVO2 ---
+, lab_svo2 as
+(select distinct
+pop.icustay_id
+--, icud.ICUSTAY_INTIME
+--, ch.charttime
+, first_value(ch.value1num) over (partition by pop.icustay_id order by ch.charttime asc) as svo2_first
+--, case when ch.value1num between 60 and 80 then 0 else 1 end as abnormal_flg
+from population pop
+join mimic2v26.chartevents ch 
+  on pop.icustay_id=ch.icustay_id 
+  and ch.itemid in (664,838)
+  and ch.value1num is not null
+  --and ch.charttime<=icud.ICUSTAY_INTIME+12/24
+order by 1
+)
+
+--select * from lab_svo2_1;
+
+--, lab_svo2 as
+--(select distinct hadm_id
+--, first_value(svo2) over (partition by hadm_id order by svo2 asc) as svo2_lowest
+--, first_value(abnormal_flg) over (partition by hadm_id order by abnormal_flg desc) as abnormal_flg
+--from lab_svo2_1
+--order by 1
+--)
+
+--select * from lab_svo2; --471 (not to be included)
+
+
 --- po2 ---
 , lab_po2_1 as
 (select pop.hadm_id
@@ -1237,7 +1535,7 @@ join mimic2v26.labevents lab
   and lab.itemid = 50019 
   and lab.valuenum is not null
   --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
-  --and pop.gender_num is not null
+  ----and pop.gender_num is not null
 order by 1
 )
 
@@ -1275,7 +1573,7 @@ join mimic2v26.labevents lab
   and lab.itemid = 50016 
   and lab.valuenum is not null
   --and lab.charttime<=pop.ICUSTAY_INTIME+3/24
-  --and pop.gender_num is not null
+  ----and pop.gender_num is not null
 order by 1
 )
 
@@ -1295,6 +1593,30 @@ order by 1
 )
 
 --select * from lab_pco2; --12782
+
+--- Troponin T--- 
+--, lab_troponin_1 as
+--(select pop.hadm_id
+--, icud.ICUSTAY_INTIME
+--, lab.charttime
+--, lab.valuenum as troponin
+--, case when lab.valuenum <= 0.1 then 0
+--        else 1 end as abnormal_flg
+--from population pop
+--join mimic2v26.icustay_detail icud 
+--  on pop.hadm_id=icud.hadm_id 
+--  and icud.ICUSTAY_SEQ =1 
+----  and icud.gender is not null
+--join mimic2v26.labevents lab 
+--  on pop.hadm_id=lab.hadm_id 
+--  and lab.itemid in (50189)
+--  and lab.valuenum is not null
+--  and lab.charttime<=icud.ICUSTAY_INTIME+12/24
+--order by 1
+--)
+
+
+--select * from lab_troponin_t; --2124
 
 
 
@@ -1747,6 +2069,11 @@ pop.*
 , case when anes.anes_free_day is null then pop.icu_los_day else anes.anes_free_day  end as anes_free_day
 --, coalesce(anes12.flg,0) as anes_12hr_flg
 , coalesce(anes.anes_b4_aline,0) as anes_b4_aline
+, coalesce(sed.fentanyl,0) as fentanyl_flg
+, coalesce(sed.midazolam,0) as midazolam_flg
+, coalesce(sed.propofol,0) as propofol_flg
+, coalesce(sed.dilaudid,0) as dilaudid_flg
+
 
 , coalesce(sep.flg,0) as sepsis_flg
 , coalesce(chf.flg,0) as chf_flg
@@ -1774,7 +2101,7 @@ pop.*
 , spo2.spo2_1st
 --, spo2.spo2_lowest
 --, spo2.spo2_highest
-----, cvp.cvp_1st
+, cvp.cvp_1st
 ----, cvp.cvp_lowest
 ----, cvp.cvp_highest
 --
@@ -1786,60 +2113,89 @@ pop.*
 
 
 , wbc.wbc_first
-, coalesce(wbc.wbc_first,0) as wbc_first_coded
---, wbc.wbc_lowest
---, wbc.wbc_highest
-, wbc.wbc_abnormal_flg
 , hgb.hgb_first
-, coalesce(hgb.hgb_first, 0) as hgb_first_coded
---, hgb.hgb_lowest
---, hgb.hgb_highest
-, hgb.hgb_abnormal_flg
 , platelet.platelet_first
-, coalesce(platelet.platelet_first, 0) as platelet_first_coded
---, platelet.platelet_lowest
---, platelet.platelet_highest
-, platelet.platelet_abnormal_flg
 , sodium.sodium_first
-, coalesce(sodium.sodium_first, 0) as sodium_first_coded
---, sodium.sodium_lowest
---, sodium.sodium_highest
-, sodium.sodium_abnormal_flg
 , potassium.potassium_first
-, coalesce(potassium.potassium_first, 0) as potassium_first_coded
---, potassium.potassium_lowest
---, potassium.potassium_highest
-, potassium.potassium_abnormal_flg
 , tco2.tco2_first
-, coalesce(tco2.tco2_first, 0) as tco2_first_coded
---, tco2.tco2_lowest
---, tco2.tco2_highest
-, tco2.tco2_abnormal_flg
 , chloride.chloride_first
-, coalesce(chloride.chloride_first, 0) as chloride_first_coded
---, chloride.chloride_lowest
---, chloride.chloride_highest
-, chloride.chloride_abnormal_flg
 , bun.bun_first
-, coalesce(bun.bun_first, 0) as bun_first_coded
---, bun.bun_lowest
---, bun.bun_highest
-, bun.bun_abnormal_flg
 , creatinine.creatinine_first
-, coalesce(creatinine.creatinine_first, 0) as creatinine_first_coded
---, creatinine.creatinine_lowest
---, creatinine.creatinine_highest
-, creatinine.creatinine_abnormal_flg
+, glucose.glucose_first
+, calcium.calcium_first
+, magnesium.magnesium_first
+, phosphate.phosphate_first
+, AST.AST_first
+, ALT.ALT_first
+, LDH.LDH_first
+, bilirubin.bilirubin_first
+, ALP.ALP_first
+, albumin.albumin_first
+, troponin_t.troponin_t_first
+, CK.CK_first
+, BNP.BNP_first
+, lactate.lactate_first
+, ph.ph_first
+, svo2.svo2_first
 , po2.po2_first
-, coalesce(po2.po2_first, 0) as po2_first_coded
---, po2.po2_lowest
---, po2.po2_highest
-, po2.po2_abnormal_flg
 , pco2.pco2_first
-, coalesce(pco2.pco2_first, 0) as pco2_first_coded
---, pco2.pco2_lowest
---, pco2.pco2_highest
-, pco2.pco2_abnormal_flg
+
+
+--, wbc.wbc_first
+--, coalesce(wbc.wbc_first,0) as wbc_first_coded
+----, wbc.wbc_lowest
+----, wbc.wbc_highest
+--, wbc.wbc_abnormal_flg
+--, hgb.hgb_first
+--, coalesce(hgb.hgb_first, 0) as hgb_first_coded
+----, hgb.hgb_lowest
+----, hgb.hgb_highest
+--, hgb.hgb_abnormal_flg
+--, platelet.platelet_first
+--, coalesce(platelet.platelet_first, 0) as platelet_first_coded
+----, platelet.platelet_lowest
+----, platelet.platelet_highest
+--, platelet.platelet_abnormal_flg
+--, sodium.sodium_first
+--, coalesce(sodium.sodium_first, 0) as sodium_first_coded
+----, sodium.sodium_lowest
+----, sodium.sodium_highest
+--, sodium.sodium_abnormal_flg
+--, potassium.potassium_first
+--, coalesce(potassium.potassium_first, 0) as potassium_first_coded
+----, potassium.potassium_lowest
+----, potassium.potassium_highest
+--, potassium.potassium_abnormal_flg
+--, tco2.tco2_first
+--, coalesce(tco2.tco2_first, 0) as tco2_first_coded
+----, tco2.tco2_lowest
+----, tco2.tco2_highest
+--, tco2.tco2_abnormal_flg
+--, chloride.chloride_first
+--, coalesce(chloride.chloride_first, 0) as chloride_first_coded
+----, chloride.chloride_lowest
+----, chloride.chloride_highest
+--, chloride.chloride_abnormal_flg
+--, bun.bun_first
+--, coalesce(bun.bun_first, 0) as bun_first_coded
+----, bun.bun_lowest
+----, bun.bun_highest
+--, bun.bun_abnormal_flg
+--, creatinine.creatinine_first
+--, coalesce(creatinine.creatinine_first, 0) as creatinine_first_coded
+----, creatinine.creatinine_lowest
+----, creatinine.creatinine_highest
+--, creatinine.creatinine_abnormal_flg
+--, po2.po2_first
+--, coalesce(po2.po2_first, 0) as po2_first_coded
+----, po2.po2_lowest
+----, po2.po2_highest
+--, po2.po2_abnormal_flg
+--, pco2.pco2_first
+--, coalesce(pco2.pco2_first, 0) as pco2_first_coded
+----, pco2.pco2_lowest
+----, pco2.pco2_highest
+--, pco2.pco2_abnormal_flg
 --
 --
 --, coalesce(res.flg,0) as restraint_flg
@@ -1861,6 +2217,11 @@ pop.*
 , coalesce(ds.flg,0) as dnr_switch_flg
 , coalesce(cs.flg,0) as cmo_switch_flg
 , coalesce(dcs.flg,0) as dnr_cmo_switch_flg
+
+, case when dur.aline_duration is null then 0
+      when dur.aline_duration >1 then 1 else
+       dur.aline_duration end as aline_duration
+
 , 1 as dummy
 
 
@@ -1871,6 +2232,7 @@ left join vaso_group vaso on vaso.icustay_id=pop.icustay_id
 --left join vaso_12hr_group vaso12 on vaso12.icustay_id=pop.icustay_id
 left join anes_group anes on anes.icustay_id=pop.icustay_id
 --left join anes_12hr_group anes12 on anes12.icustay_id=pop.icustay_id
+left join sedative_drug sed on sed.icustay_id=pop.icustay_id
 
 left join sepsis_group sep on sep.hadm_id=pop.hadm_id
 left join chf_group chf on chf.hadm_id=pop.hadm_id
@@ -1891,10 +2253,11 @@ left join map_group m on m.icustay_id=pop.icustay_id
 left join hr_group hr on hr.icustay_id=pop.icustay_id
 left join t_group t on t.icustay_id=pop.icustay_id
 left join spo2_group spo2 on spo2.icustay_id=pop.icustay_id
-----left join cvp_group cvp on cvp.icustay_id=pop.icustay_id
+left join cvp_group cvp on cvp.icustay_id=pop.icustay_id
 
 left join abg_count abg on abg.icustay_id=pop.icustay_id
 left join lab_hct hct on hct.icustay_id=pop.icustay_id
+
 left join lab_wbc wbc on wbc.icustay_id=pop.icustay_id
 left join lab_hgb hgb on hgb.icustay_id=pop.icustay_id
 left join lab_platelet platelet on platelet.icustay_id=pop.icustay_id
@@ -1904,6 +2267,22 @@ left join lab_tco2 tco2 on tco2.icustay_id=pop.icustay_id
 left join lab_chloride chloride on chloride.icustay_id=pop.icustay_id
 left join lab_bun bun on bun.icustay_id=pop.icustay_id
 left join lab_creatinine creatinine on creatinine.icustay_id=pop.icustay_id
+left join lab_glucose glucose on glucose.icustay_id=pop.icustay_id
+left join lab_calcium calcium on calcium.icustay_id=pop.icustay_id
+left join lab_magnesium magnesium on magnesium.icustay_id=pop.icustay_id
+left join lab_phosphate phosphate on phosphate.icustay_id=pop.icustay_id
+left join lab_AST AST on AST.icustay_id=pop.icustay_id
+left join lab_ALT ALT on ALT.icustay_id=pop.icustay_id
+left join lab_LDH LDH on LDH.icustay_id=pop.icustay_id
+left join lab_bilirubin bilirubin on bilirubin.icustay_id=pop.icustay_id
+left join lab_ALP ALP on ALP.icustay_id=pop.icustay_id
+left join lab_albumin albumin on albumin.icustay_id=pop.icustay_id
+left join lab_troponin_t troponin_t on troponin_t.icustay_id=pop.icustay_id
+left join lab_CK CK on CK.icustay_id=pop.icustay_id
+left join lab_BNP BNP on BNP.icustay_id=pop.icustay_id
+left join lab_lactate lactate on lactate.icustay_id=pop.icustay_id
+left join lab_ph ph on ph.icustay_id=pop.icustay_id
+left join lab_svo2 svo2 on svo2.icustay_id=pop.icustay_id
 left join lab_po2 po2 on po2.icustay_id=pop.icustay_id
 left join lab_pco2 pco2 on pco2.icustay_id=pop.icustay_id
 
@@ -1921,6 +2300,8 @@ left join dnr_adm da on da.icustay_id=pop.icustay_id
 left join dnr_switch ds on ds.icustay_id=pop.icustay_id
 left join cmo_switch cs on cs.icustay_id=pop.icustay_id
 left join dnr_cmo_switch dcs on dcs.icustay_id=pop.icustay_id
+
+left join aline_duration dur on dur.icustay_id=pop.icustay_id
 
 )
 
