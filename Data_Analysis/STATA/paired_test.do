@@ -2,6 +2,7 @@ mcc day_28_flg_t day_28_flg_u
 mcc gender_num_t gender_num_u
 mcc service_num_t service_num_u
 
+
 mcc chf_flg_t chf_flg_u
 mcc afib_flg_t afib_flg_u
 mcc renal_flg_t renal_flg_u
@@ -26,6 +27,11 @@ tabulate chf_flg aline_flg, column exact
 tabulate pneumonia_flg aline_flg, column exact
 tabulate ards_flg aline_flg, column exact
 
+tabulate ethnic_group_t
+tabulate ethnic_group_u
+
+tabulate day_icu_intime_num_t
+tabulate day_icu_intime_num_u
 
 logit day_28_flg i.aline_flg, or
 
@@ -230,7 +236,21 @@ stset sd, failure(event_flg_28==1)
 stcrreg aline_flg, compete(event_flg_28==2 )
 stcurve, cif at1(aline_flg=0) at2(aline_flg=1)
 
+/******** aline duration regression analysis *******/
+regress icu_los_day aline_duration if icu_exp_flg==0
+regress icu_los_day aline_duration if icu_exp_flg==1
 
+regress hospital_los_day aline_duration if hosp_exp_flg==0
+regress hospital_los_day aline_duration if hosp_exp_flg==1
+
+
+logit day_28_flg aline_duration if aline_flg==1, or
+
+regress icu_los_day aline_duration if icu_exp_flg==0 & aline_flg==1
+regress icu_los_day aline_duration if icu_exp_flg==1 & aline_flg==1
+
+regress hospital_los_day aline_duration if hosp_exp_flg==0 & aline_flg==1
+regress hospital_los_day aline_duration if hosp_exp_flg==1 & aline_flg==1
 
 
 
