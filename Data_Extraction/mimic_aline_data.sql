@@ -21,8 +21,8 @@
 --create table aline_mimic_data_march14 as
 --create table aline_mimic_data_apr14 as
 
-drop table aline_mimic_data_april15;
-create table aline_mimic_data_april15 as
+--drop table aline_mimic_data_april15;
+--create table aline_mimic_data_april15 as
 with population_1 as
 (select * from mornin.aline_mimic_COHORT_feb14
 --where icustay_id<10
@@ -772,6 +772,30 @@ group by pop.icustay_id, lab.charttime
 )
 
 --select * from abg_lab;
+
+, abg_count as
+(select icustay_id
+, count(*) as abg_count
+from abg_lab
+where labcount=3
+group by icustay_id
+)
+
+--select * from abg_count;
+
+---------------  vbg test count --------------------
+, vbg_lab as(
+select distinct 
+pop.icustay_id
+, ch.charttime
+, count(*) as labcount
+from population pop
+join mimic2v26.chartevents ch on ch.icustay_id=pop.icustay_id
+  and ch.itemid in (857,858,860,3773,3774,3775,3776,3777) and ch.value is not null
+group by pop.icustay_id, ch.charttime
+)
+
+select * from abg_lab;
 
 , abg_count as
 (select icustay_id
