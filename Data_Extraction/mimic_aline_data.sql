@@ -48,7 +48,17 @@ pop.*
 , case when icud.gender is null then null
   when icud.gender = 'M' then 1 else 0 end as gender_num
 , icud.gender as gender
-, dd.ETHNICITY_DESCR as ethnic_group
+, case 
+when dd.ETHNICITY_DESCR like '%WHITE%' then 'WHITE'
+when dd.ETHNICITY_DESCR like '%ASIAN%' then 'ASIAN'
+when dd.ETHNICITY_DESCR like '%HISPANIC%' or dd.ETHNICITY_DESCR='SOUTH AMERICAN' then 'HISPANIC'
+when dd.ETHNICITY_DESCR like '%WHITE%' or dd.ETHNICITY_DESCR='PORTUGUESE' then 'WHITE'
+when dd.ETHNICITY_DESCR like '%BLACK%' then 'BLACK'
+when dd.ETHNICITY_DESCR like '%NATIVE%' then 'NATIVE'
+when dd.ETHNICITY_DESCR in ('UNKNOWN/NOT SPECIFIED', 'PATIENT DECLINED TO ANSWER', 'UNABLE TO OBTAIN') then 'UNKNOWN'
+else 'OTHER'
+end as ETHNIC_GROUP
+--, dd.ETHNICITY_DESCR as ethnic_group
 , icud.WEIGHT_FIRST
 , bmi.bmi
 , icud.SAPSI_FIRST
@@ -82,6 +92,9 @@ left join mimic2v26.demographic_detail dd on dd.subject_id=pop.subject_id
 
 , population as
 (select p.*
+, case when hour_icu_intime >= 7 and hour_icu_intime<19 then 1
+      else 0
+    end as icu_hour_flg
 , case when p.mort_day<=28 then 1 else 0 end as day_28_flg
 , coalesce(p.mort_day, 731) as mort_day_censored
 , case when p.mort_day<=730 then 0 else 1 end as censor_flg 
@@ -2339,7 +2352,13 @@ select * from aline_data;
 --------------------------------------------------------------------------------------------------------
 
  
-
+create table aline_cohort_data_apr15 as
+select * from aline_mimic_data_april15
+where initial_aline_flg=0
+and vent_1st_24hr=1
+and sepsis_flg=0
+and vaso_flg=0
+and service_num<=1;
 
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
@@ -2347,14 +2366,6 @@ select * from aline_data;
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
-
-select hadm_id, echo_flg
-from echo_ps_dec13
-where echo_flg=1 and weight is not null;
-
-select hadm_id
-from echo_ps_dec13
-where echo_flg=0 and weight is not null;
 
 
 
