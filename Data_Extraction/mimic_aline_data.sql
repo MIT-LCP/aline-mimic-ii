@@ -22,7 +22,7 @@
 --create table aline_mimic_data_apr14 as
 
 --drop table aline_mimic_data_april15;
---create table aline_mimic_data_april15 as
+create table aline_mimic_data_may15 as
 with population_1 as
 (select * from mornin.aline_mimic_COHORT_feb14
 --where icustay_id<10
@@ -804,21 +804,21 @@ pop.icustay_id
 , count(*) as labcount
 from population pop
 join mimic2v26.chartevents ch on ch.icustay_id=pop.icustay_id
-  and ch.itemid in (857,858,860,3773,3774,3775,3776,3777) and ch.value is not null
+  and ch.itemid in (857,858,860,3773,3774,3775,3776,3777) and ch.value1 is not null
 group by pop.icustay_id, ch.charttime
 )
 
-select * from abg_lab;
+--select * from vbg_lab;
 
-, abg_count as
+, vbg_count as
 (select icustay_id
-, count(*) as abg_count
+, count(*) as vbg_count
 from abg_lab
-where labcount=3
+where labcount>=1
 group by icustay_id
 )
 
---select * from abg_count;
+--select * from vbg_count;
 
 --- HCT ---
 , lab_hct_1 as
@@ -2143,6 +2143,7 @@ pop.*
 ----, cvp.cvp_highest
 --
 , coalesce(abg.abg_count,0) as abg_count
+, coalesce(vbg.vbg_count,0) as vbg_count
 , hct.hct_med
 , hct.hct_lowest
 , hct.hct_highest
@@ -2293,6 +2294,7 @@ left join spo2_group spo2 on spo2.icustay_id=pop.icustay_id
 left join cvp_group cvp on cvp.icustay_id=pop.icustay_id
 
 left join abg_count abg on abg.icustay_id=pop.icustay_id
+left join vbg_count vbg on vbg.icustay_id=pop.icustay_id
 left join lab_hct hct on hct.icustay_id=pop.icustay_id
 
 left join lab_wbc wbc on wbc.icustay_id=pop.icustay_id
