@@ -298,6 +298,10 @@ stset sd, failure(event_flg_28==1)
 stcrreg aline_flg, compete(event_flg_28==2 )
 stcurve, cif at1(aline_flg=0) at2(aline_flg=1)
 
+/****** Aline durartion dosage effect *********/
+
+ logit day_28_flg aline_duration age i.gender_num i.service_num sofa_first i.chf_flg i.afib_flg i.renal_flg i.liver_flg i.copd_flg i.cad_flg i.stroke_flg i.mal_flg i.resp_flg if aline_flg==1, or
+
 
 
 
