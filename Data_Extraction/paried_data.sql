@@ -1,3 +1,4 @@
+drop table ALINE_PAIRED_DATA_MAY15;
 create table ALINE_PAIRED_DATA_MAY15 as
 with treated as
 (select m.icustay_id as icustay_id_t
@@ -61,6 +62,7 @@ with treated as
 ,CVP_1ST as CVP_1ST_t
 ,ABG_COUNT as ABG_COUNT_t
 ,VBG_COUNT as VBG_COUNT_t
+,BG_COUNT as BG_COUNT_t
 ,HCT_MED as HCT_MED_t
 ,HCT_LOWEST as HCT_LOWEST_t
 ,HCT_HIGHEST as HCT_HIGHEST_t
@@ -168,6 +170,7 @@ join ALINE_MIMIC_DATA_MAY15 d on m.icustay_id=d.icustay_id and m.treated=1
 ,CVP_1ST as CVP_1ST_u
 ,ABG_COUNT as ABG_COUNT_u
 ,VBG_COUNT as VBG_COUNT_u
+,BG_COUNT as BG_COUNT_u
 ,HCT_MED as HCT_MED_u
 ,HCT_LOWEST as HCT_LOWEST_u
 ,HCT_HIGHEST as HCT_HIGHEST_u

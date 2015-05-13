@@ -110,6 +110,11 @@ replace  hour_icu_intime_flg_u=1 if hour_icu_intime_u>7 & hour_icu_intime_u<19
 
 mcc hour_icu_intime_flg_t hour_icu_intime_flg_u
 
+summarize weight_first_t, detail
+summarize weight_first_u, detail
+ttest weight_first_t=weight_first_u
+
+
 summarize map_1st_t, detail
 summarize map_1st_u, detail
 ttest map_1st_t=map_1st_u

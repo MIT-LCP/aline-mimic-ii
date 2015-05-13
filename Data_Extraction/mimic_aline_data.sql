@@ -21,7 +21,7 @@
 --create table aline_mimic_data_march14 as
 --create table aline_mimic_data_apr14 as
 
---drop table aline_mimic_data_april15;
+drop table aline_mimic_data_may15;
 create table aline_mimic_data_may15 as
 with population_1 as
 (select * from mornin.aline_mimic_COHORT_feb14
@@ -804,7 +804,7 @@ pop.icustay_id
 , count(*) as labcount
 from population pop
 join mimic2v26.chartevents ch on ch.icustay_id=pop.icustay_id
-  and ch.itemid in (857,858,860,3773,3774,3775,3776,3777) and ch.value1 is not null
+  and ch.itemid in (858,859,860) and ch.value1 is not null
 group by pop.icustay_id, ch.charttime
 )
 
@@ -814,7 +814,7 @@ group by pop.icustay_id, ch.charttime
 (select icustay_id
 , count(*) as vbg_count
 from abg_lab
-where labcount>=1
+where labcount=3
 group by icustay_id
 )
 
@@ -2144,6 +2144,7 @@ pop.*
 --
 , coalesce(abg.abg_count,0) as abg_count
 , coalesce(vbg.vbg_count,0) as vbg_count
+, coalesce(abg.abg_count,0)+coalesce(vbg.vbg_count,0) as bg_total
 , hct.hct_med
 , hct.hct_lowest
 , hct.hct_highest
