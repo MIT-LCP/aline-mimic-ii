@@ -35,6 +35,13 @@ tabulate propofol_flg_t
 tabulate propofol_flg_u
 mcc propofol_flg_t propofol_flg_u
 
+generate vbg_count_norm_t=vbg_count_t/icu_los_day_t
+generate vbg_count_norm_u=vbg_count_u/icu_los_day_u
+
+summarize vbg_count_norm_t, detail
+summarize vbg_count_norm_u, detail
+ttest vbg_count_norm_t=vbg_count_norm_u
+
 
 
 tabulate gender_num aline_flg, column exact
@@ -190,3 +197,4 @@ ttest svo2_first_t =svo2_first_u
 /* Table 2 */
 ttest icu_los_day_t=icu_los_day_u if icu_exp_flg_t==0 & icu_exp_flg_u==0
 ttest hospital_los_day_t=hospital_los_day_u if hosp_exp_flg_t==0 & hosp_exp_flg_u==0
+ttest vent_day_t=vent_day_u if icu_exp_flg_t==0 & icu_exp_flg_u==0
