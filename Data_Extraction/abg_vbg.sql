@@ -1,4 +1,4 @@
-create table aline_abg_vbg as
+--create table aline_abg_vbg as
 with population as
 (select * from mornin.ALINE_MATCH
 --where icustay_id<10
@@ -77,12 +77,25 @@ where m.treated=0
 )
 
 --select * from untreated;
-, final_table as
+, final_table_1 as
 (select t.*
 , u.abg_count_u
 , u.vbg_count_u
 from treated t
 join untreated u on t.n1=u.id
+)
+
+--select * from final_table_1;
+, final_table as
+(select f.*
+, p.ICU_LOS_DAY_T
+, p.ICU_LOS_DAY_u
+, round(f.abg_count_t/p.ICU_LOS_DAY_T,2) as abg_count_norm_t
+, round(f.vbg_count_t/p.ICU_LOS_DAY_T,2) as vbg_count_norm_t
+, round(f.abg_count_u/p.ICU_LOS_DAY_U,2) as abg_count_norm_u
+, round(f.vbg_count_u/p.ICU_LOS_DAY_U,2) as vbg_count_norm_u
+from final_table_1 f
+join mornin.ALINE_PAIRED_DATA_MAY15 p on f.icustay_id=p.icustay_id_t
 )
 
 select * from final_table;
