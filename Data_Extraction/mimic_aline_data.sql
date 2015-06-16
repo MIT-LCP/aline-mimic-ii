@@ -2353,10 +2353,10 @@ select * from aline_data;
 -------------------------- Clean version of the data -------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
-
- 
-create table aline_cohort_data_apr15 as
-select * from aline_mimic_data_april15
+  
+create table aline_cohort_data_june15 as
+select a.*, coalesce(m.treated, -1) as matched_flg from aline_mimic_data_april15 a
+left join aline_match m on m.icustay_id=a.icustay_id
 where initial_aline_flg=0
 and vent_1st_24hr=1
 and sepsis_flg=0
